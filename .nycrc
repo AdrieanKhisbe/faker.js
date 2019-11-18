@@ -1,0 +1,25 @@
+{
+    "all": false,
+    "include": [
+      "lib/**/*.js",
+      "vendor/*.js"
+    ],
+    "exclude": [
+      "coverage",
+      "locales",
+      "modules",
+      "white",
+      "docs",
+      "docker",
+      "public",
+      "reports",
+      "tests",
+      "node_modules"
+    ],
+    "reporter": [
+      "html",
+      "lcov",
+      "clover"
+    ],
+    "report-dir": "./reports/coverage"
+}
