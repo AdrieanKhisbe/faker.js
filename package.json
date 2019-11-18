@@ -12,7 +12,7 @@
   "scripts": {
     "lint": "jshint lib --config .jshintrc",
     "test": "mocha test/*.*.js",
-    "build": "cd build && gulp && cd ..",
+    "build": "gulp --gulpfile build/gulpfile.js",
     "doc": "jsdoc -c conf.json -t ./node_modules/ink-docstrap/template -R README.md lib",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
