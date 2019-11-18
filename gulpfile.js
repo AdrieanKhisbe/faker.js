@@ -13,6 +13,9 @@
 
 */
 
+const path = require('path');
+const fs = require('fs');
+const through = require('through2')
 const gulp = require('gulp');
 const jsdoc = require('gulp-jsdoc3');
 const uglify = require('gulp-uglify');
@@ -20,10 +23,8 @@ const rename = require('gulp-rename');
 const ghPages = require('gulp-gh-pages');
 const mustache = require('gulp-mustache');
 const browserify = require('browserify');
-const transform = require('vinyl-transform');
-const path = require('path');
-const fs = require('fs');
-const through = require('through2')
+const source = require('vinyl-source-stream');
+const streamify = require('gulp-streamify');
 
 gulp.task('browser-package', function() {
 
@@ -37,27 +38,23 @@ gulp.task('browser-package', function() {
 
   */
 
-  const browserified = transform(function(filename) {
-    // use browserify to create UMD stand-alone browser package
-    return browserify(filename, {
-      standalone: 'faker'
-    }).bundle();
-  });
+ // use browserify to create UMD stand-alone browser package
+  const bundleStream = browserify('./index.js', {standalone: 'faker'}).bundle();
 
-  return gulp.src('./index.js')
-    .pipe(browserified)
+  return bundleStream
+    .pipe(source('./index.js'))
     .pipe(rename('faker.js'))
     .pipe(gulp.dest('build/'))
     .pipe(gulp.dest('./examples/browser/js'))
     .pipe(rename({ extname: '.min.js' }))
-    .pipe(uglify())
+    .pipe(streamify(uglify()))
     .pipe(gulp.dest('build/'))
     .pipe(gulp.dest('./examples/browser/js'))
     .pipe(rename('./examples/browser/js/faker.min.js'));
 });
 
 // pushes jsdoc changes to gh-pages branch
-gulp.task('gh-pages', function(cb) {
+gulp.task('gh-pages', function() {
   return gulp.src('./doc/**/*')
      .pipe(ghPages());
 });
@@ -120,23 +117,18 @@ Object.keys(locales).forEach(function(locale, i) {
    if (i > 0) {
      // return;
    }
-   tasks.push(locale + 'Task');
-   gulp.task(locale + 'Task', function() {
+   const localTaskName = `generate-locale-${locale}`
+   tasks.push(localTaskName);
+   gulp.task(localTaskName, function() {
+    const bundleStream = browserify('./index.js', {standalone: 'faker'}).bundle();
 
-    const browserified = transform(function(filename) {
-      // use browserify to create UMD stand-alone browser package
-      return browserify(filename, {
-        standalone: 'faker'
-      }).bundle();
-    });
-    process.chdir('./locale/');
-    return gulp.src(`./${locale}.js`)
-      .pipe(browserified)
+    return bundleStream
+      .pipe(source(`./locale/${locale}.js`))
       .pipe(rename(`faker.${locale}.js`))
       .pipe(gulp.dest(`./build/build/locales/${locale}`))
       .pipe(gulp.dest(`./examples/browser/locales/${locale}/`))
       .pipe(rename({ extname: '.min.js' }))
-      .pipe(uglify())
+      .pipe(streamify(uglify()))
       .pipe(gulp.dest(`./build/build/locales/${locale}`))
       .pipe(gulp.dest(`./examples/browser/locales/${locale}/`))
       .pipe(rename(`./examples/browser/locales/${locale}/faker.${locale}min.js`));
@@ -147,11 +139,10 @@ gulp.task('nodeLocalRequires', function (cb){
   const locales = require('./lib/locales');
   for (const locale in locales) {
     const localeFile = path.normalize(`${__dirname}/locale/${locale}.js`);
-    const localeRequire = `const Faker = require('../lib');
-const faker = new Faker({ locale: '${locale}', localeFallback: 'en' });
+    const localeRequire = `var Faker = require('../lib');
+var faker = new Faker({ locale: '${locale}', localeFallback: 'en' });
 faker.locales['${locale}'] = require('../lib/locales/${locale}');
 faker.locales['en'] = require('../lib/locales/en');
-
 module['exports'] = faker;
 `;
     // TODO: better fallback support
@@ -160,5 +151,5 @@ module['exports'] = faker;
   cb();
 });
 
-
+gulp.task('local', gulp.series(tasks.filter(name => name !== 'gh-pages')));
 gulp.task('default', gulp.series(tasks));
