@@ -30,10 +30,10 @@ gulp.task('browser-package', function() {
   /* task for building browser bundles using browserify
 
      this task will generate the following files:
-      ./build/faker.js
-      ./build/faker.min.js
-      ../examples/browser/js/faker.js
-      ../examples/browser/js/faker.min.js
+      ./build/build/faker.js
+      ./build/build/faker.min.js
+      ./examples/browser/js/faker.js
+      ./examples/browser/js/faker.min.js
 
   */
 
@@ -44,27 +44,27 @@ gulp.task('browser-package', function() {
     }).bundle();
   });
 
-  return gulp.src('../index.js')
+  return gulp.src('./index.js')
     .pipe(browserified)
     .pipe(rename('faker.js'))
     .pipe(gulp.dest('build/'))
-    .pipe(gulp.dest('../examples/browser/js'))
+    .pipe(gulp.dest('./examples/browser/js'))
     .pipe(rename({ extname: '.min.js' }))
     .pipe(uglify())
     .pipe(gulp.dest('build/'))
-    .pipe(gulp.dest('../examples/browser/js'))
-    .pipe(rename('../examples/browser/js/faker.min.js'));
+    .pipe(gulp.dest('./examples/browser/js'))
+    .pipe(rename('./examples/browser/js/faker.min.js'));
 });
 
 // pushes jsdoc changes to gh-pages branch
 gulp.task('gh-pages', function(cb) {
-  return gulp.src('../doc/**/*')
+  return gulp.src('./doc/**/*')
      .pipe(ghPages());
 });
 
 gulp.task('jsdoc', function (cb) {
-    const config = require('../conf.json');
-    gulp.src(['../README.md', '../lib/*.js'], {read: false})
+    const config = require('./conf.json');
+    gulp.src(['./README.md', './lib/*.js'], {read: false})
         .pipe(jsdoc(config, cb));
 });
 
@@ -77,14 +77,14 @@ gulp.task('documentation', function(cb) {
   */
 
   let API = '', LOCALES = '';
-  const faker = require('../index');
+  const faker = require('.');
 
   // generate locale list
   for (const locale in faker.locales) {
     LOCALES += ` * ${locale}\n`;
   }
 
-  const keys = Object.keys(faker).sort();
+  let keys = Object.keys(faker).sort();
 
   // generate nice tree of api for docs
   keys.forEach(function(_module){
@@ -98,21 +98,21 @@ gulp.task('documentation', function(cb) {
     }
   });
 
-  return gulp.src('./src/docs.md')
+  return gulp.src('./build/src/docs.md')
     .pipe(mustache({
        'API': API,
        'LOCALES': LOCALES,
        'startYear': 2010,
        'currentYear': new Date().getFullYear()
      }))
-    .pipe(rename('./Readme.md'))
-    .pipe(gulp.dest('../'))
+    .pipe(rename('./build/Readme.md'))
+    .pipe(gulp.dest('./build'))
 
 });
 
 const tasks = ['documentation', 'jsdoc', 'nodeLocalRequires', 'browser-package', 'gh-pages'];
 
-const locales = require('../lib/locales');
+const locales = require('./lib/locales');
 const localTasks = Object.keys(locales);
 
 /* task for generating unique browser builds for every locale */
@@ -129,24 +129,24 @@ Object.keys(locales).forEach(function(locale, i) {
         standalone: 'faker'
       }).bundle();
     });
-    process.chdir('../locale/');
+    process.chdir('./locale/');
     return gulp.src(`./${locale}.js`)
       .pipe(browserified)
       .pipe(rename(`faker.${locale}.js`))
-      .pipe(gulp.dest(`../build/build/locales/${locale}`))
-      .pipe(gulp.dest(`../examples/browser/locales/${locale}/`))
+      .pipe(gulp.dest(`./build/build/locales/${locale}`))
+      .pipe(gulp.dest(`./examples/browser/locales/${locale}/`))
       .pipe(rename({ extname: '.min.js' }))
       .pipe(uglify())
-      .pipe(gulp.dest(`../build/build/locales/${locale}`))
-      .pipe(gulp.dest(`../examples/browser/locales/${locale}/`))
-      .pipe(rename(`../examples/browser/locales/${locale}/faker.${locale}min.js`));
+      .pipe(gulp.dest(`./build/build/locales/${locale}`))
+      .pipe(gulp.dest(`./examples/browser/locales/${locale}/`))
+      .pipe(rename(`./examples/browser/locales/${locale}/faker.${locale}min.js`));
    });
 });
 
 gulp.task('nodeLocalRequires', function (cb){
-  const locales = require('../lib/locales');
+  const locales = require('./lib/locales');
   for (const locale in locales) {
-    const localeFile = path.normalize(`${__dirname}/../locale/${locale}.js`);
+    const localeFile = path.normalize(`${__dirname}/locale/${locale}.js`);
     const localeRequire = `const Faker = require('../lib');
 const faker = new Faker({ locale: '${locale}', localeFallback: 'en' });
 faker.locales['${locale}'] = require('../lib/locales/${locale}');
@@ -155,7 +155,7 @@ faker.locales['en'] = require('../lib/locales/en');
 module['exports'] = faker;
 `;
     // TODO: better fallback support
-    fs.writeFile(localeFile, localeRequire);
+    fs.writeFileSync(localeFile, localeRequire);
   }
   cb();
 });
